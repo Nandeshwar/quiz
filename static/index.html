@@ -242,6 +242,24 @@
       color: var(--bad);
     }
 
+    .feedback {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(180, 35, 24, 0.2);
+      background: rgba(180, 35, 24, 0.06);
+      color: var(--ink);
+    }
+
+    .feedback strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--bad);
+      font-family: "Trebuchet MS", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 12px;
+    }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -443,8 +461,10 @@
           </label>
 
           <div class="actions">
+            <button id="homeBtn" class="ghost" type="button">Home</button>
             <button id="startBtn" type="button">Start Quiz</button>
             <button id="showBankBtn" class="ghost" type="button">Load Question Bank</button>
+            <button id="refreshDataBtn" class="ghost" type="button">Fetch Latest Data</button>
             <button id="contactBtn" class="ghost" type="button">Contact</button>
           </div>
 
@@ -482,6 +502,7 @@
                 Your Answer
                 <textarea id="answerInput" placeholder="Type one answer, or separate multiple answers with commas."></textarea>
               </label>
+              <div id="answerFeedback" class="feedback hidden"></div>
               <div class="actions">
                 <button id="submitAnswerBtn" type="button">Submit Answer</button>
                 <button id="finishBtn" class="ghost" type="button">Show Results</button>
@@ -519,6 +540,7 @@
       questionBank: [],
       questionBankLocality: "",
       questionBankAsOf: "",
+      awaitingNext: false,
       currentIndex: 0,
       totalQuestions: 0
     };
@@ -537,6 +559,7 @@
     const questionTextEl = document.getElementById("questionText");
     const questionHintEl = document.getElementById("questionHint");
     const answerInputEl = document.getElementById("answerInput");
+    const answerFeedbackEl = document.getElementById("answerFeedback");
     const scoreTextEl = document.getElementById("scoreText");
     const scoreMetaEl = document.getElementById("scoreMeta");
     const resultsEl = document.getElementById("results");
@@ -554,9 +577,13 @@
     });
 
     document.getElementById("startBtn").addEventListener("click", startQuiz);
+    document.getElementById("homeBtn").addEventListener("click", () => {
+      window.location.href = "/";
+    });
     document.getElementById("submitAnswerBtn").addEventListener("click", submitAnswer);
     document.getElementById("finishBtn").addEventListener("click", showResults);
     document.getElementById("showBankBtn").addEventListener("click", loadBank);
+    document.getElementById("refreshDataBtn").addEventListener("click", refreshLatestData);
     document.getElementById("contactBtn").addEventListener("click", () => {
       window.location.href = "/contact";
     });
@@ -592,6 +619,7 @@
       resultsPanelEl.classList.add("hidden");
       bankPanelEl.classList.add("hidden");
       sessionMetaEl.textContent = "No active quiz.";
+      hideAnswerFeedback();
     }
 
     function resetQuestionBankCache() {
@@ -628,6 +656,22 @@
       setStatus(`Location updated for ${payload.locality}.`, "good");
     }
 
+    async function refreshLatestData() {
+      setStatus("Fetching latest officeholder data...", "");
+      const response = await fetch("/api/refresh-data", { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.message || "Could not refresh latest data.", "bad");
+        return;
+      }
+
+      state.sessionId = "";
+      resetQuestionBankCache();
+      resetPanels();
+      await loadLocation();
+      setStatus(payload.message || "Latest data refreshed.", "good");
+    }
+
     async function startQuiz() {
       const count = Number(countEl.value || "10");
       setStatus("Starting quiz...", "");
@@ -648,6 +692,7 @@
       state.questions = payload.questions;
       state.totalQuestions = payload.totalQuestions;
       state.currentIndex = 0;
+      state.awaitingNext = false;
 
       sessionMetaEl.textContent = `${payload.sessionId} · ${payload.totalQuestions} questions · ${payload.zip}`;
       locationMetaEl.textContent = `${payload.location.locality} · ${payload.location.representativeDistrict || "district unavailable"}`;
@@ -671,10 +716,23 @@
         ? `This prompt needs ${question.requiredAnswers} accepted answers. Separate them with commas.`
         : "This prompt needs one accepted answer.";
       answerInputEl.value = "";
+      document.getElementById("submitAnswerBtn").textContent = "Submit Answer";
+      state.awaitingNext = false;
+      hideAnswerFeedback();
       answerInputEl.focus();
     }
 
     async function submitAnswer() {
+      if (state.awaitingNext) {
+        state.currentIndex += 1;
+        if (state.currentIndex >= state.questions.length) {
+          showResults();
+          return;
+        }
+        renderQuestion();
+        return;
+      }
+
       const question = state.questions[state.currentIndex];
       if (!question) {
         return;
@@ -697,13 +755,40 @@
         return;
       }
 
-      setStatus(payload.correct ? "Accepted." : "Marked incorrect.", payload.correct ? "good" : "bad");
+      if (!payload.correct) {
+        showWrongAnswerFeedback(payload);
+        state.awaitingNext = true;
+        document.getElementById("submitAnswerBtn").textContent = "Next Question";
+        setStatus("Marked incorrect. Review the accepted answers, then continue.", "bad");
+        return;
+      }
+
+      setStatus("Accepted.", "good");
       state.currentIndex += 1;
       if (state.currentIndex >= state.questions.length) {
         showResults();
         return;
       }
       renderQuestion();
+    }
+
+    function showWrongAnswerFeedback(payload) {
+      answerFeedbackEl.innerHTML = `
+        <strong>Incorrect Answer</strong>
+        <p><b>Your answer:</b> ${escapeHtml(payload.userAnswer || "No answer")}</p>
+        <div class="bank-answer">
+          <b>Accepted answers:</b>
+          <ol class="answer-list">
+            ${payload.acceptedAnswers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
+          </ol>
+        </div>
+      `;
+      answerFeedbackEl.classList.remove("hidden");
+    }
+
+    function hideAnswerFeedback() {
+      answerFeedbackEl.innerHTML = "";
+      answerFeedbackEl.classList.add("hidden");
     }
 
     async function showResults() {

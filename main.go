@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -79,6 +80,14 @@ type zipAPIResponse struct {
 		State             string `json:"state"`
 		StateAbbreviation string `json:"state abbreviation"`
 	} `json:"places"`
+}
+
+type senateFeed struct {
+	Members []struct {
+		FirstName string `xml:"first_name"`
+		LastName  string `xml:"last_name"`
+		State     string `xml:"state"`
+	} `xml:"member"`
 }
 
 type questionResponse struct {
@@ -228,6 +237,132 @@ func normalizeZip(zip string) string {
 	return zipOnlyRE.FindString(zip)
 }
 
+func (r *locationResolver) RefreshLatestData() error {
+	states, err := r.fetchLatestStateMeta()
+	if err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	r.states = states
+	r.cache = make(map[string]locationContext)
+	r.mu.Unlock()
+	return nil
+}
+
+func (r *locationResolver) fetchLatestStateMeta() (map[string]stateInfo, error) {
+	r.mu.RLock()
+	base := make(map[string]stateInfo, len(r.states))
+	for code, info := range r.states {
+		base[code] = stateInfo{
+			State:    info.State,
+			Capital:  info.Capital,
+			Governor: info.Governor,
+			Senators: cloneStrings(info.Senators),
+		}
+	}
+	r.mu.RUnlock()
+
+	senators, err := r.fetchLatestSenators()
+	if err != nil {
+		return nil, err
+	}
+	governors, err := r.fetchLatestGovernors(base)
+	if err != nil {
+		return nil, err
+	}
+
+	for code, info := range base {
+		if latest, ok := senators[code]; ok {
+			info.Senators = latest
+		}
+		if latest, ok := governors[code]; ok {
+			info.Governor = latest
+		}
+		base[code] = info
+	}
+
+	return base, nil
+}
+
+func (r *locationResolver) fetchLatestSenators() (map[string][]string, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://www.senate.gov/general/contact_information/senators_cfm.xml", nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := r.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("refresh senators: %w", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("refresh senators: status %d", res.StatusCode)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var feed senateFeed
+	if err := xml.Unmarshal(body, &feed); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]string)
+	for _, member := range feed.Members {
+		if member.State == "" || member.FirstName == "" || member.LastName == "" {
+			continue
+		}
+		result[member.State] = append(result[member.State], strings.TrimSpace(member.FirstName+" "+member.LastName))
+	}
+	return result, nil
+}
+
+func (r *locationResolver) fetchLatestGovernors(states map[string]stateInfo) (map[string]string, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://www.nga.org/cms/governors/bios", nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := r.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("refresh governors: %w", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("refresh governors: status %d", res.StatusCode)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	html := string(body)
+
+	stateNameToCode := make(map[string]string, len(states))
+	for code, info := range states {
+		stateNameToCode[info.State] = code
+	}
+
+	result := make(map[string]string)
+	matches := governorCardRE.FindAllStringSubmatch(html, -1)
+	for _, match := range matches {
+		if len(match) < 3 {
+			continue
+		}
+		stateName := strings.TrimSpace(spaceRE.ReplaceAllString(match[1], " "))
+		governor := strings.TrimSpace(spaceRE.ReplaceAllString(match[2], " "))
+		governor = strings.TrimPrefix(governor, "Gov. ")
+		if code, ok := stateNameToCode[stateName]; ok && governor != "" {
+			result[code] = governor
+		}
+	}
+	if len(result) == 0 {
+		return nil, errors.New("refresh governors: no governor data found")
+	}
+	return result, nil
+}
+
 func (r *locationResolver) fetchLocation(zip string) (locationContext, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://api.zippopotam.us/us/"+url.PathEscape(zip), nil)
 	if err != nil {
@@ -321,6 +456,15 @@ func main() {
 		}
 		return c.JSON(http.StatusOK, loc)
 	})
+	api.POST("/refresh-data", func(c echo.Context) error {
+		if err := resolver.RefreshLatestData(); err != nil {
+			return echo.NewHTTPError(http.StatusBadGateway, err.Error())
+		}
+		return c.JSON(http.StatusOK, map[string]any{
+			"status":  "refreshed",
+			"message": "Latest Senate and governor data loaded",
+		})
+	})
 	registerVersionRoutes(api.Group("/v1"), v1, store, resolver)
 	registerVersionRoutes(api.Group("/v2"), v2, store, resolver)
 
@@ -349,6 +493,7 @@ func logRoutes() {
 		"GET    /contact",
 		"GET    /health",
 		"GET    /api/location?zip=80134",
+		`POST   /api/refresh-data`,
 		"GET    /api/v1/questions",
 		"GET    /api/v1/questions/61?zip=80134",
 		`POST   /api/v1/startQuiz {"count":10,"zip":"80134"}`,
@@ -477,11 +622,14 @@ func registerVersionRoutes(group *echo.Group, ds dataset, store *sessionStore, r
 		store.mu.Unlock()
 
 		return c.JSON(http.StatusOK, map[string]any{
-			"sessionId":  session.ID,
-			"questionId": q.ID,
-			"correct":    result.Correct,
-			"answered":   answered,
-			"remaining":  total - answered,
+			"sessionId":       session.ID,
+			"questionId":      q.ID,
+			"question":        q.Question,
+			"userAnswer":      result.UserAnswer,
+			"acceptedAnswers": result.AcceptedAnswers,
+			"correct":         result.Correct,
+			"answered":        answered,
+			"remaining":       total - answered,
 		})
 	})
 
@@ -577,10 +725,11 @@ func findQuestionInList(items []question, id int) (question, bool) {
 }
 
 var (
-	zipOnlyRE  = regexp.MustCompile(`\d{5}`)
-	repNameRE  = regexp.MustCompile(`(?s)<p class="rep[^"]*">.*?<a href="https?://[^"]+">([^<]+)</a><br>`)
-	districtRE = regexp.MustCompile(`(?s)is located in the\s+(.+?)\.`)
-	spaceRE    = regexp.MustCompile(`\s+`)
+	zipOnlyRE      = regexp.MustCompile(`\d{5}`)
+	repNameRE      = regexp.MustCompile(`(?s)<p class="rep[^"]*">.*?<a href="https?://[^"]+">([^<]+)</a><br>`)
+	districtRE     = regexp.MustCompile(`(?s)is located in the\s+(.+?)\.`)
+	governorCardRE = regexp.MustCompile(`(?s)<small class="state">([^<]+)</small>\s*Gov\.\s*([^<]+)\s*</div>`)
+	spaceRE        = regexp.MustCompile(`\s+`)
 )
 
 func (r *locationResolver) fetchRepresentatives(zip string) ([]string, string, error) {
