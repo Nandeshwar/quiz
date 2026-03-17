@@ -1,0 +1,13 @@
+node_modules/
+bin/
+build/
+dist/
+vendor/
+*.log
+*.out
+*.exe
+*.zip
+*.tar
+.env
+.idea/
+.vscode/
