@@ -11,3 +11,7 @@ vendor/
 .env
 .idea/
 .vscode/
+.gocache/
+.gomodcache/
+quiz
+.DS_Store
