@@ -1,0 +1,452 @@
+{
+  "AL": {
+    "state": "Alabama",
+    "capital": "Montgomery",
+    "governor": "Kay Ivey",
+    "senators": [
+      "Katie Boyd Britt",
+      "Tommy Tuberville"
+    ]
+  },
+  "AK": {
+    "state": "Alaska",
+    "capital": "Juneau",
+    "governor": "Mike Dunleavy",
+    "senators": [
+      "Dan Sullivan",
+      "Lisa Murkowski"
+    ]
+  },
+  "AZ": {
+    "state": "Arizona",
+    "capital": "Phoenix",
+    "governor": "Katie Hobbs",
+    "senators": [
+      "Mark Kelly",
+      "Ruben Gallego"
+    ]
+  },
+  "AR": {
+    "state": "Arkansas",
+    "capital": "Little Rock",
+    "governor": "Sarah Huckabee Sanders",
+    "senators": [
+      "John Boozman",
+      "Tom Cotton"
+    ]
+  },
+  "CA": {
+    "state": "California",
+    "capital": "Sacramento",
+    "governor": "Gavin Newsom",
+    "senators": [
+      "Adam B. Schiff",
+      "Alex Padilla"
+    ]
+  },
+  "CO": {
+    "state": "Colorado",
+    "capital": "Denver",
+    "governor": "Jared Polis",
+    "senators": [
+      "John W. Hickenlooper",
+      "Michael F. Bennet"
+    ]
+  },
+  "CT": {
+    "state": "Connecticut",
+    "capital": "Hartford",
+    "governor": "Ned Lamont",
+    "senators": [
+      "Christopher Murphy",
+      "Richard Blumenthal"
+    ]
+  },
+  "DE": {
+    "state": "Delaware",
+    "capital": "Dover",
+    "governor": "Matt Meyer",
+    "senators": [
+      "Christopher A. Coons",
+      "Lisa Blunt Rochester"
+    ]
+  },
+  "FL": {
+    "state": "Florida",
+    "capital": "Tallahassee",
+    "governor": "Ron DeSantis",
+    "senators": [
+      "Ashley Moody",
+      "Rick Scott"
+    ]
+  },
+  "GA": {
+    "state": "Georgia",
+    "capital": "Atlanta",
+    "governor": "Brian Kemp",
+    "senators": [
+      "Jon Ossoff",
+      "Raphael G. Warnock"
+    ]
+  },
+  "HI": {
+    "state": "Hawaii",
+    "capital": "Honolulu",
+    "governor": "Josh Green",
+    "senators": [
+      "Brian Schatz",
+      "Mazie K. Hirono"
+    ]
+  },
+  "ID": {
+    "state": "Idaho",
+    "capital": "Boise",
+    "governor": "Brad Little",
+    "senators": [
+      "James E. Risch",
+      "Mike Crapo"
+    ]
+  },
+  "IL": {
+    "state": "Illinois",
+    "capital": "Springfield",
+    "governor": "JB Pritzker",
+    "senators": [
+      "Richard J. Durbin",
+      "Tammy Duckworth"
+    ]
+  },
+  "IN": {
+    "state": "Indiana",
+    "capital": "Indianapolis",
+    "governor": "Mike Braun",
+    "senators": [
+      "Jim Banks",
+      "Todd Young"
+    ]
+  },
+  "IA": {
+    "state": "Iowa",
+    "capital": "Des Moines",
+    "governor": "Kim Reynolds",
+    "senators": [
+      "Chuck Grassley",
+      "Joni Ernst"
+    ]
+  },
+  "KS": {
+    "state": "Kansas",
+    "capital": "Topeka",
+    "governor": "Laura Kelly",
+    "senators": [
+      "Jerry Moran",
+      "Roger Marshall"
+    ]
+  },
+  "KY": {
+    "state": "Kentucky",
+    "capital": "Frankfort",
+    "governor": "Andy Beshear",
+    "senators": [
+      "Mitch McConnell",
+      "Rand Paul"
+    ]
+  },
+  "LA": {
+    "state": "Louisiana",
+    "capital": "Baton Rouge",
+    "governor": "Jeff Landry",
+    "senators": [
+      "Bill Cassidy",
+      "John Kennedy"
+    ]
+  },
+  "ME": {
+    "state": "Maine",
+    "capital": "Augusta",
+    "governor": "Janet Mills",
+    "senators": [
+      "Angus S., Jr. King",
+      "Susan M. Collins"
+    ]
+  },
+  "MD": {
+    "state": "Maryland",
+    "capital": "Annapolis",
+    "governor": "Wes Moore",
+    "senators": [
+      "Angela D. Alsobrooks",
+      "Chris Van Hollen"
+    ]
+  },
+  "MA": {
+    "state": "Massachusetts",
+    "capital": "Boston",
+    "governor": "Maura Healey",
+    "senators": [
+      "Edward J. Markey",
+      "Elizabeth Warren"
+    ]
+  },
+  "MI": {
+    "state": "Michigan",
+    "capital": "Lansing",
+    "governor": "Gretchen Whitmer",
+    "senators": [
+      "Elissa Slotkin",
+      "Gary C. Peters"
+    ]
+  },
+  "MN": {
+    "state": "Minnesota",
+    "capital": "Saint Paul",
+    "governor": "Tim Walz",
+    "senators": [
+      "Amy Klobuchar",
+      "Tina Smith"
+    ]
+  },
+  "MS": {
+    "state": "Mississippi",
+    "capital": "Jackson",
+    "governor": "Tate Reeves",
+    "senators": [
+      "Cindy Hyde-Smith",
+      "Roger F. Wicker"
+    ]
+  },
+  "MO": {
+    "state": "Missouri",
+    "capital": "Jefferson City",
+    "governor": "Mike Kehoe",
+    "senators": [
+      "Eric Schmitt",
+      "Josh Hawley"
+    ]
+  },
+  "MT": {
+    "state": "Montana",
+    "capital": "Helena",
+    "governor": "Greg Gianforte",
+    "senators": [
+      "Steve Daines",
+      "Tim Sheehy"
+    ]
+  },
+  "NE": {
+    "state": "Nebraska",
+    "capital": "Lincoln",
+    "governor": "Jim Pillen",
+    "senators": [
+      "Deb Fischer",
+      "Pete Ricketts"
+    ]
+  },
+  "NV": {
+    "state": "Nevada",
+    "capital": "Carson City",
+    "governor": "Joe Lombardo",
+    "senators": [
+      "Catherine Cortez Masto",
+      "Jacky Rosen"
+    ]
+  },
+  "NH": {
+    "state": "New Hampshire",
+    "capital": "Concord",
+    "governor": "Kelly Ayotte",
+    "senators": [
+      "Jeanne Shaheen",
+      "Margaret Wood Hassan"
+    ]
+  },
+  "NJ": {
+    "state": "New Jersey",
+    "capital": "Trenton",
+    "governor": "Mikie Sherrill",
+    "senators": [
+      "Andy Kim",
+      "Cory A. Booker"
+    ]
+  },
+  "NM": {
+    "state": "New Mexico",
+    "capital": "Santa Fe",
+    "governor": "Michelle Lujan Grisham",
+    "senators": [
+      "Ben Ray Luj\u00e1n",
+      "Martin Heinrich"
+    ]
+  },
+  "NY": {
+    "state": "New York",
+    "capital": "Albany",
+    "governor": "Kathy Hochul",
+    "senators": [
+      "Charles E. Schumer",
+      "Kirsten E. Gillibrand"
+    ]
+  },
+  "NC": {
+    "state": "North Carolina",
+    "capital": "Raleigh",
+    "governor": "Josh Stein",
+    "senators": [
+      "Ted Budd",
+      "Thom Tillis"
+    ]
+  },
+  "ND": {
+    "state": "North Dakota",
+    "capital": "Bismarck",
+    "governor": "Kelly Armstrong",
+    "senators": [
+      "John Hoeven",
+      "Kevin Cramer"
+    ]
+  },
+  "OH": {
+    "state": "Ohio",
+    "capital": "Columbus",
+    "governor": "Mike DeWine",
+    "senators": [
+      "Bernie Moreno",
+      "Jon Husted"
+    ]
+  },
+  "OK": {
+    "state": "Oklahoma",
+    "capital": "Oklahoma City",
+    "governor": "Kevin Stitt",
+    "senators": [
+      "James Lankford",
+      "Markwayne Mullin"
+    ]
+  },
+  "OR": {
+    "state": "Oregon",
+    "capital": "Salem",
+    "governor": "Tina Kotek",
+    "senators": [
+      "Jeff Merkley",
+      "Ron Wyden"
+    ]
+  },
+  "PA": {
+    "state": "Pennsylvania",
+    "capital": "Harrisburg",
+    "governor": "Josh Shapiro",
+    "senators": [
+      "David McCormick",
+      "John Fetterman"
+    ]
+  },
+  "RI": {
+    "state": "Rhode Island",
+    "capital": "Providence",
+    "governor": "Dan McKee",
+    "senators": [
+      "Jack Reed",
+      "Sheldon Whitehouse"
+    ]
+  },
+  "SC": {
+    "state": "South Carolina",
+    "capital": "Columbia",
+    "governor": "Henry McMaster",
+    "senators": [
+      "Lindsey Graham",
+      "Tim Scott"
+    ]
+  },
+  "SD": {
+    "state": "South Dakota",
+    "capital": "Pierre",
+    "governor": "Larry Rhoden",
+    "senators": [
+      "John Thune",
+      "Mike Rounds"
+    ]
+  },
+  "TN": {
+    "state": "Tennessee",
+    "capital": "Nashville",
+    "governor": "Bill Lee",
+    "senators": [
+      "Bill Hagerty",
+      "Marsha Blackburn"
+    ]
+  },
+  "TX": {
+    "state": "Texas",
+    "capital": "Austin",
+    "governor": "Greg Abbott",
+    "senators": [
+      "John Cornyn",
+      "Ted Cruz"
+    ]
+  },
+  "UT": {
+    "state": "Utah",
+    "capital": "Salt Lake City",
+    "governor": "Spencer Cox",
+    "senators": [
+      "John R. Curtis",
+      "Mike Lee"
+    ]
+  },
+  "VT": {
+    "state": "Vermont",
+    "capital": "Montpelier",
+    "governor": "Phil Scott",
+    "senators": [
+      "Bernard Sanders",
+      "Peter Welch"
+    ]
+  },
+  "VA": {
+    "state": "Virginia",
+    "capital": "Richmond",
+    "governor": "Abigail Spanberger",
+    "senators": [
+      "Mark R. Warner",
+      "Tim Kaine"
+    ]
+  },
+  "WA": {
+    "state": "Washington",
+    "capital": "Olympia",
+    "governor": "Bob Ferguson",
+    "senators": [
+      "Maria Cantwell",
+      "Patty Murray"
+    ]
+  },
+  "WV": {
+    "state": "West Virginia",
+    "capital": "Charleston",
+    "governor": "Patrick Morrisey",
+    "senators": [
+      "James C. Justice",
+      "Shelley Moore Capito"
+    ]
+  },
+  "WI": {
+    "state": "Wisconsin",
+    "capital": "Madison",
+    "governor": "Tony Evers",
+    "senators": [
+      "Ron Johnson",
+      "Tammy Baldwin"
+    ]
+  },
+  "WY": {
+    "state": "Wyoming",
+    "capital": "Cheyenne",
+    "governor": "Mark Gordon",
+    "senators": [
+      "Cynthia M. Lummis",
+      "John Barrasso"
+    ]
+  }
+}

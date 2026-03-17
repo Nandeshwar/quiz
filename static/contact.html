@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>contact</title>
+  <style>
+    :root {
+      --bg: #f7efe4;
+      --card: rgba(255, 250, 242, 0.94);
+      --ink: #1d2430;
+      --muted: #586574;
+      --accent: #b6422e;
+      --line: rgba(29, 36, 48, 0.12);
+      --shadow: 0 24px 60px rgba(67, 34, 17, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(182, 66, 46, 0.16), transparent 34%),
+        linear-gradient(180deg, #faf4e8 0%, #efe3cf 100%);
+    }
+
+    .card {
+      width: min(720px, 100%);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      font: 700 12px/1.2 "Trebuchet MS", sans-serif;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 8vw, 58px);
+      line-height: 0.96;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .info {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(29, 36, 48, 0.08);
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 6px;
+      font: 700 12px/1.2 "Trebuchet MS", sans-serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    a {
+      color: var(--ink);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      font: 700 15px/1.1 "Trebuchet MS", sans-serif;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, #b6422e, #7f2418);
+      color: #fffaf3;
+    }
+
+    .button.secondary {
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      .card { padding: 20px; border-radius: 20px; }
+      p { font-size: 16px; }
+      .actions { flex-direction: column; }
+      .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Contact</div>
+    <h1>Nandeshwar Sah</h1>
+    <p>If you need updates, feedback, or changes for this civics quiz application, use the email below.</p>
+
+    <section class="info">
+      <div>
+        <span class="label">Name</span>
+        <div>Nandeshwar Sah</div>
+      </div>
+      <div>
+        <span class="label">Email</span>
+        <a href="mailto:sah.nandeshwar@gmail.com">sah.nandeshwar@gmail.com</a>
+      </div>
+    </section>
+
+    <div class="actions">
+      <a class="button" href="mailto:sah.nandeshwar@gmail.com">Email Nandeshwar</a>
+      <a class="button secondary" href="/">Back To Quiz</a>
+    </div>
+  </main>
+</body>
+</html>

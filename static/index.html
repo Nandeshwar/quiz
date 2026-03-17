@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>quiz</title>
+  <style>
+    :root {
+      --bg: #f5efe3;
+      --panel: rgba(255, 250, 240, 0.92);
+      --panel-strong: #fffaf0;
+      --ink: #1a202c;
+      --muted: #5f6b76;
+      --accent: #b6422e;
+      --accent-dark: #7f2418;
+      --line: rgba(26, 32, 44, 0.12);
+      --good: #1e7a4c;
+      --bad: #b42318;
+      --shadow: 0 24px 60px rgba(67, 34, 17, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(182, 66, 46, 0.18), transparent 36%),
+        radial-gradient(circle at bottom right, rgba(26, 87, 125, 0.18), transparent 34%),
+        linear-gradient(180deg, #f9f3e8 0%, #efe5d2 100%);
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 32px auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255, 250, 240, 0.96), rgba(246, 232, 209, 0.92));
+      border: 1px solid rgba(127, 36, 24, 0.12);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -42% auto;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(182, 66, 46, 0.14), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--accent-dark);
+      font-family: "Trebuchet MS", sans-serif;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 66px);
+      line-height: 0.95;
+      max-width: 11ch;
+    }
+
+    .lede {
+      margin: 0;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-inner {
+      padding: 24px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      font-family: "Trebuchet MS", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    select,
+    input,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(26, 32, 44, 0.18);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff8f1;
+      font-family: "Trebuchet MS", sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--ink);
+      border: 1px solid rgba(26, 32, 44, 0.12);
+    }
+
+    .facts {
+      display: grid;
+      gap: 12px;
+    }
+
+    .compact-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .fact {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid rgba(26, 32, 44, 0.08);
+    }
+
+    .fact strong,
+    .question-number {
+      display: block;
+      font-family: "Trebuchet MS", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      margin-bottom: 6px;
+      color: var(--accent-dark);
+    }
+
+    .question-card,
+    .result-card,
+    .bank-card {
+      background: var(--panel-strong);
+      border: 1px solid rgba(26, 32, 44, 0.09);
+      border-radius: 22px;
+      padding: 22px;
+    }
+
+    .question-text {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 40px);
+      line-height: 1.08;
+    }
+
+    .hint,
+    .status,
+    .bank-answer,
+    .meta {
+      color: var(--muted);
+    }
+
+    .status {
+      min-height: 24px;
+      font-family: "Trebuchet MS", sans-serif;
+    }
+
+    .status.good {
+      color: var(--good);
+    }
+
+    .status.bad {
+      color: var(--bad);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .results {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .result-card.good {
+      border-color: rgba(30, 122, 76, 0.28);
+    }
+
+    .result-card.bad {
+      border-color: rgba(180, 35, 24, 0.28);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-family: "Trebuchet MS", sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(26, 32, 44, 0.08);
+    }
+
+    .pill.good {
+      background: rgba(30, 122, 76, 0.1);
+      color: var(--good);
+    }
+
+    .pill.bad {
+      background: rgba(180, 35, 24, 0.1);
+      color: var(--bad);
+    }
+
+    .answer-list {
+      margin: 10px 0 0;
+      padding-left: 24px;
+      color: var(--muted);
+      list-style-type: lower-alpha;
+    }
+
+    .answer-list li {
+      margin: 6px 0;
+    }
+
+    .bank {
+      display: grid;
+      gap: 14px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .shell {
+        width: min(100% - 20px, 1120px);
+        margin: 14px auto 28px;
+      }
+
+      .hero-inner,
+      .panel-inner {
+        padding: 20px;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .actions button,
+      .compact-actions button {
+        width: 100%;
+      }
+
+      .compact-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .question-card,
+      .result-card,
+      .bank-card {
+        padding: 18px;
+        border-radius: 18px;
+      }
+
+      .question-text {
+        font-size: clamp(24px, 8vw, 34px);
+      }
+
+      textarea {
+        min-height: 120px;
+      }
+
+      .bank {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        background:
+          radial-gradient(circle at top left, rgba(182, 66, 46, 0.12), transparent 30%),
+          linear-gradient(180deg, #faf5ea 0%, #efe5d2 100%);
+      }
+
+      .shell {
+        width: calc(100% - 12px);
+        margin: 6px auto 18px;
+        gap: 14px;
+      }
+
+      .hero,
+      .panel {
+        border-radius: 20px;
+      }
+
+      .hero-inner,
+      .panel-inner {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: clamp(28px, 12vw, 38px);
+      }
+
+      .lede {
+        font-size: 16px;
+      }
+
+      select,
+      input,
+      textarea,
+      button {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow">Parker, Colorado 80134</div>
+        <h1>USCIS Civics Quiz Studio</h1>
+        <p class="lede">Practice the official USCIS civics questions with Parker-specific answers where the interview expects local or current officeholder details. Choose the 2025 128-question set or the classic 100-question set, then take a randomized quiz in the browser.</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <aside class="panel">
+        <div class="panel-inner stack">
+          <label>
+            Question Set
+            <select id="version">
+              <option value="v1">v1: 2025 test, 128 questions</option>
+              <option value="v2">v2: classic test, 100 questions</option>
+            </select>
+          </label>
+
+          <label>
+            ZIP Code
+            <div class="compact-actions">
+              <input id="zipCode" list="zipDefaults" inputmode="numeric" maxlength="5" value="80134" placeholder="Enter a U.S. ZIP code">
+              <button id="updateZipBtn" class="ghost" type="button">Use ZIP</button>
+            </div>
+            <datalist id="zipDefaults">
+              <option value="80134"></option>
+            </datalist>
+          </label>
+
+          <label>
+            Quiz Size
+            <input id="count" type="number" min="1" max="20" value="10">
+          </label>
+
+          <label>
+            Search Questions Or Answers
+            <div class="compact-actions">
+              <input id="searchInput" type="search" placeholder="Example: governor, Denver, constitution">
+              <button id="searchBtn" class="ghost" type="button">Search</button>
+            </div>
+          </label>
+
+          <div class="actions">
+            <button id="startBtn" type="button">Start Quiz</button>
+            <button id="showBankBtn" class="ghost" type="button">Load Question Bank</button>
+            <button id="contactBtn" class="ghost" type="button">Contact</button>
+          </div>
+
+          <div class="facts">
+            <div class="fact">
+              <strong>Scoring</strong>
+              Case is ignored. If 75% of the words from an accepted answer are present, the answer is marked correct.
+            </div>
+            <div class="fact">
+              <strong>API Base</strong>
+              <span id="apiBase"></span>
+            </div>
+            <div class="fact">
+              <strong>Location</strong>
+              <span id="locationMeta">Parker, Colorado 80134</span>
+            </div>
+            <div class="fact">
+              <strong>Session</strong>
+              <span id="sessionMeta">No active quiz.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-inner stack">
+          <div id="status" class="status"></div>
+
+          <section id="quizPanel" class="hidden stack">
+            <div class="question-card stack">
+              <div class="question-number" id="questionNumber"></div>
+              <p class="question-text" id="questionText"></p>
+              <p class="hint" id="questionHint"></p>
+              <label>
+                Your Answer
+                <textarea id="answerInput" placeholder="Type one answer, or separate multiple answers with commas."></textarea>
+              </label>
+              <div class="actions">
+                <button id="submitAnswerBtn" type="button">Submit Answer</button>
+                <button id="finishBtn" class="ghost" type="button">Show Results</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="resultsPanel" class="hidden stack">
+            <div class="question-card stack">
+              <div class="question-number">Quiz Result</div>
+              <p class="question-text" id="scoreText"></p>
+              <p class="meta" id="scoreMeta"></p>
+            </div>
+            <div id="results" class="results"></div>
+          </section>
+
+          <section id="bankPanel" class="hidden stack">
+            <div class="question-card stack">
+              <div class="question-number">Question Bank</div>
+              <p class="meta" id="bankMeta"></p>
+            </div>
+            <div id="bank" class="bank"></div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      version: "v1",
+      zip: "80134",
+      sessionId: "",
+      questions: [],
+      questionBank: [],
+      questionBankLocality: "",
+      questionBankAsOf: "",
+      currentIndex: 0,
+      totalQuestions: 0
+    };
+
+    const versionEl = document.getElementById("version");
+    const zipCodeEl = document.getElementById("zipCode");
+    const countEl = document.getElementById("count");
+    const statusEl = document.getElementById("status");
+    const apiBaseEl = document.getElementById("apiBase");
+    const locationMetaEl = document.getElementById("locationMeta");
+    const sessionMetaEl = document.getElementById("sessionMeta");
+    const quizPanelEl = document.getElementById("quizPanel");
+    const bankPanelEl = document.getElementById("bankPanel");
+    const resultsPanelEl = document.getElementById("resultsPanel");
+    const questionNumberEl = document.getElementById("questionNumber");
+    const questionTextEl = document.getElementById("questionText");
+    const questionHintEl = document.getElementById("questionHint");
+    const answerInputEl = document.getElementById("answerInput");
+    const scoreTextEl = document.getElementById("scoreText");
+    const scoreMetaEl = document.getElementById("scoreMeta");
+    const resultsEl = document.getElementById("results");
+    const bankEl = document.getElementById("bank");
+    const bankMetaEl = document.getElementById("bankMeta");
+    const searchInputEl = document.getElementById("searchInput");
+
+    apiBaseEl.textContent = `${window.location.origin}/api`;
+
+    versionEl.addEventListener("change", () => {
+      state.version = versionEl.value;
+      resetQuestionBankCache();
+      setStatus(`Ready for ${state.version.toUpperCase()}.`, "");
+      resetPanels();
+    });
+
+    document.getElementById("startBtn").addEventListener("click", startQuiz);
+    document.getElementById("submitAnswerBtn").addEventListener("click", submitAnswer);
+    document.getElementById("finishBtn").addEventListener("click", showResults);
+    document.getElementById("showBankBtn").addEventListener("click", loadBank);
+    document.getElementById("contactBtn").addEventListener("click", () => {
+      window.location.href = "/contact";
+    });
+    document.getElementById("searchBtn").addEventListener("click", searchQuestions);
+    document.getElementById("updateZipBtn").addEventListener("click", applyZipSelection);
+    zipCodeEl.addEventListener("change", applyZipSelection);
+    searchInputEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        searchQuestions();
+      }
+    });
+    zipCodeEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyZipSelection();
+      }
+    });
+
+    applyZipSelection();
+
+    function endpoint(path) {
+      return `/api/${state.version}${path}`;
+    }
+
+    function setStatus(message, kind) {
+      statusEl.textContent = message;
+      statusEl.className = `status${kind ? ` ${kind}` : ""}`;
+    }
+
+    function resetPanels() {
+      quizPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      bankPanelEl.classList.add("hidden");
+      sessionMetaEl.textContent = "No active quiz.";
+    }
+
+    function resetQuestionBankCache() {
+      state.questionBank = [];
+      state.questionBankLocality = "";
+      state.questionBankAsOf = "";
+    }
+
+    async function applyZipSelection() {
+      const zip = String(zipCodeEl.value || "").trim();
+      if (!/^\d{5}$/.test(zip)) {
+        setStatus("Enter a valid 5-digit ZIP code.", "bad");
+        return;
+      }
+
+      state.zip = zip;
+      state.sessionId = "";
+      resetQuestionBankCache();
+      resetPanels();
+      await loadLocation();
+    }
+
+    async function loadLocation() {
+      setStatus("Resolving ZIP code...", "");
+      const response = await fetch(`/api/location?zip=${encodeURIComponent(state.zip)}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        locationMetaEl.textContent = "ZIP not resolved.";
+        setStatus(payload.message || "Could not resolve ZIP code.", "bad");
+        return;
+      }
+
+      locationMetaEl.textContent = `${payload.locality} · ${payload.representativeDistrict || "district unavailable"}`;
+      setStatus(`Location updated for ${payload.locality}.`, "good");
+    }
+
+    async function startQuiz() {
+      const count = Number(countEl.value || "10");
+      setStatus("Starting quiz...", "");
+      resultsEl.innerHTML = "";
+
+      const response = await fetch(endpoint("/startQuiz"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count, zip: state.zip })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.message || "Could not start quiz.", "bad");
+        return;
+      }
+
+      state.sessionId = payload.sessionId;
+      state.questions = payload.questions;
+      state.totalQuestions = payload.totalQuestions;
+      state.currentIndex = 0;
+
+      sessionMetaEl.textContent = `${payload.sessionId} · ${payload.totalQuestions} questions · ${payload.zip}`;
+      locationMetaEl.textContent = `${payload.location.locality} · ${payload.location.representativeDistrict || "district unavailable"}`;
+      bankPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      quizPanelEl.classList.remove("hidden");
+      renderQuestion();
+      setStatus("Quiz started.", "good");
+    }
+
+    function renderQuestion() {
+      const question = state.questions[state.currentIndex];
+      if (!question) {
+        showResults();
+        return;
+      }
+
+      questionNumberEl.textContent = `Question ${state.currentIndex + 1} of ${state.totalQuestions}`;
+      questionTextEl.textContent = question.question;
+      questionHintEl.textContent = question.requiredAnswers > 1
+        ? `This prompt needs ${question.requiredAnswers} accepted answers. Separate them with commas.`
+        : "This prompt needs one accepted answer.";
+      answerInputEl.value = "";
+      answerInputEl.focus();
+    }
+
+    async function submitAnswer() {
+      const question = state.questions[state.currentIndex];
+      if (!question) {
+        return;
+      }
+
+      const answer = answerInputEl.value.trim();
+      if (!answer) {
+        setStatus("Enter an answer before submitting.", "bad");
+        return;
+      }
+
+      const response = await fetch(endpoint(`/startQuiz/${state.sessionId}/answer`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: question.id, answer })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.message || "Could not submit answer.", "bad");
+        return;
+      }
+
+      setStatus(payload.correct ? "Accepted." : "Marked incorrect.", payload.correct ? "good" : "bad");
+      state.currentIndex += 1;
+      if (state.currentIndex >= state.questions.length) {
+        showResults();
+        return;
+      }
+      renderQuestion();
+    }
+
+    async function showResults() {
+      if (!state.sessionId) {
+        setStatus("Start a quiz first.", "bad");
+        return;
+      }
+
+      const response = await fetch(endpoint(`/startQuiz/${state.sessionId}/result`));
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.message || "Could not load results.", "bad");
+        return;
+      }
+
+      quizPanelEl.classList.add("hidden");
+      bankPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.remove("hidden");
+
+      scoreTextEl.textContent = `${payload.score} / ${payload.total}`;
+      scoreMetaEl.textContent = `${payload.percentage}% correct · ${payload.completed ? "completed" : "partial"} submission`;
+      locationMetaEl.textContent = `${payload.locality} · ${payload.zip}`;
+
+      resultsEl.innerHTML = payload.results.map((result) => `
+        <article class="result-card ${result.correct ? "good" : "bad"}">
+          <div class="actions">
+            <span class="pill ${result.correct ? "good" : "bad"}">${result.correct ? "Correct" : "Incorrect"}</span>
+          </div>
+          <p><strong>Q${result.questionId}.</strong> ${escapeHtml(result.question)}</p>
+          <p><strong>Your answer:</strong> ${escapeHtml(result.userAnswer || "No answer")}</p>
+          <div class="bank-answer">
+            <strong>Accepted answers:</strong>
+            <ol class="answer-list">
+              ${result.acceptedAnswers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
+            </ol>
+          </div>
+        </article>
+      `).join("");
+
+      setStatus("Results loaded.", "good");
+    }
+
+    async function loadBank() {
+      const payload = await ensureQuestionBank();
+      if (!payload) {
+        return;
+      }
+
+      bankMetaEl.textContent = `${payload.count} questions · ${payload.locality} · answers dated ${payload.asOf}`;
+      renderBank(payload.questions);
+      quizPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      bankPanelEl.classList.remove("hidden");
+      setStatus("Question bank ready.", "good");
+    }
+
+    async function searchQuestions() {
+      const query = searchInputEl.value.trim();
+      if (!query) {
+        setStatus("Enter search text first.", "bad");
+        return;
+      }
+
+      const payload = await ensureQuestionBank();
+      if (!payload) {
+        return;
+      }
+
+      const needle = normalizeSearch(query);
+      const matches = payload.questions.filter((item) => {
+        return matchSearch(item, needle);
+      });
+
+      bankMetaEl.textContent = matches.length
+        ? `${matches.length} match${matches.length === 1 ? "" : "es"} for "${query}" in ${state.version.toUpperCase()} · ${state.zip}`
+        : `No matches for "${query}" in ${state.version.toUpperCase()} · ${state.zip}`;
+      renderBank(matches);
+      quizPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      bankPanelEl.classList.remove("hidden");
+      setStatus(matches.length ? "Search complete." : "No matching questions found.", matches.length ? "good" : "bad");
+    }
+
+    async function ensureQuestionBank() {
+      if (state.questionBank.length > 0) {
+        return {
+          questions: state.questionBank,
+          count: state.questionBank.length,
+          locality: state.questionBankLocality,
+          asOf: state.questionBankAsOf
+        };
+      }
+
+      setStatus("Loading question bank...", "");
+      const response = await fetch(`${endpoint("/questions")}?zip=${encodeURIComponent(state.zip)}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        setStatus(payload.message || "Could not load question bank.", "bad");
+        return null;
+      }
+
+      state.questionBank = payload.questions;
+      state.questionBankLocality = payload.locality;
+      state.questionBankAsOf = payload.asOf;
+      return payload;
+    }
+
+    function renderBank(items) {
+      if (!items.length) {
+        bankEl.innerHTML = `
+          <article class="bank-card">
+            <div class="question-number">No Results</div>
+            <p class="meta">Try a different word from the question or one of the accepted answers.</p>
+          </article>
+        `;
+        return;
+      }
+
+      bankEl.innerHTML = items.map((item) => `
+        <article class="bank-card">
+          <div class="question-number">Question ${item.id}</div>
+          <p><strong>${escapeHtml(item.question)}</strong></p>
+          <div class="bank-answer">
+            <ol class="answer-list">
+              ${item.answers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
+            </ol>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function normalizeSearch(value) {
+      return String(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function matchSearch(item, needle) {
+      const queryWords = normalizeSearch(needle).split(" ").filter(Boolean);
+      if (!queryWords.length) {
+        return false;
+      }
+
+      const candidates = [
+        item.question,
+        ...item.answers
+      ];
+
+      return candidates.some((candidate) => {
+        const words = normalizeSearch(candidate).split(" ").filter(Boolean);
+        if (!words.length) {
+          return false;
+        }
+
+        const uniqueWords = new Set(words);
+        let matched = 0;
+        for (const queryWord of queryWords) {
+          if (uniqueWords.has(queryWord)) {
+            matched += 1;
+          }
+        }
+
+        return (matched / queryWords.length) >= 0.5;
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+  </script>
+</body>
+</html>
