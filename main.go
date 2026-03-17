@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
@@ -16,6 +17,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -495,11 +497,13 @@ func logRoutes() {
 		"GET    /api/location?zip=80134",
 		`POST   /api/refresh-data`,
 		"GET    /api/v1/questions",
+		"GET    /api/v1/questions.pdf?zip=80134",
 		"GET    /api/v1/questions/61?zip=80134",
 		`POST   /api/v1/startQuiz {"count":10,"zip":"80134"}`,
 		"POST   /api/v1/startQuiz/{sessionID}/answer",
 		"GET    /api/v1/startQuiz/{sessionID}/result",
 		"GET    /api/v2/questions",
+		"GET    /api/v2/questions.pdf?zip=80134",
 		"GET    /api/v2/questions/43?zip=80134",
 		`POST   /api/v2/startQuiz {"count":10,"zip":"80134"}`,
 		"POST   /api/v2/startQuiz/{sessionID}/answer",
@@ -527,6 +531,28 @@ func registerVersionRoutes(group *echo.Group, ds dataset, store *sessionStore, r
 			"count":     len(items),
 			"questions": items,
 		})
+	})
+
+	group.GET("/questions.pdf", func(c echo.Context) error {
+		localized, _, err := resolveDatasetForRequest(ds, resolver, c.QueryParam("zip"))
+		if err != nil {
+			return err
+		}
+
+		zip := normalizeZip(c.QueryParam("zip"))
+		if zip == "" {
+			zip = defaultZip
+		}
+
+		pdf, err := buildQuestionsPDF(localized)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		filename := fmt.Sprintf("quiz-%s-%s.pdf", localized.Version, zip)
+		c.Response().Header().Set(echo.HeaderContentType, "application/pdf")
+		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`attachment; filename="%s"`, filename))
+		return c.Blob(http.StatusOK, "application/pdf", pdf)
 	})
 
 	group.GET("/questions/:id", func(c echo.Context) error {
@@ -832,6 +858,159 @@ func buildNameAnswers(name, title string) []string {
 	return []string{name, fmt.Sprintf("%s %s", title, name)}
 }
 
+func buildQuestionsPDF(ds dataset) ([]byte, error) {
+	const (
+		pageWidth    = 612
+		pageHeight   = 792
+		leftMargin   = 50
+		topMargin    = 742
+		bottomMargin = 50
+		lineHeight   = 14
+		maxChars     = 88
+	)
+
+	lines := []string{
+		"USCIS Civics Questions",
+		fmt.Sprintf("%s | %s | answers dated %s", ds.Locality, strings.ToUpper(ds.Version), ds.AsOf),
+		"",
+	}
+
+	for _, q := range ds.Questions {
+		lines = append(lines, wrapPDFText(fmt.Sprintf("Question %d: %s", q.ID, q.Question), maxChars)...)
+		for idx, answer := range q.Answers {
+			label := string(rune('a' + idx))
+			lines = append(lines, wrapPDFText(fmt.Sprintf("%s. %s", label, answer), maxChars)...)
+		}
+		lines = append(lines, "")
+	}
+
+	maxLinesPerPage := (topMargin - bottomMargin) / lineHeight
+	if maxLinesPerPage <= 0 {
+		maxLinesPerPage = 40
+	}
+
+	type pdfObject struct {
+		id      int
+		content string
+	}
+
+	objects := []pdfObject{}
+	nextID := 1
+	newID := func() int {
+		id := nextID
+		nextID++
+		return id
+	}
+
+	fontID := newID()
+	pagesID := newID()
+
+	pageIDs := []int{}
+	contentIDs := []int{}
+	for start := 0; start < len(lines); start += maxLinesPerPage {
+		end := start + maxLinesPerPage
+		if end > len(lines) {
+			end = len(lines)
+		}
+
+		contentText := renderPDFPage(lines[start:end], leftMargin, topMargin, lineHeight)
+		contentID := newID()
+		pageID := newID()
+		contentIDs = append(contentIDs, contentID)
+		pageIDs = append(pageIDs, pageID)
+
+		objects = append(objects, pdfObject{
+			id:      contentID,
+			content: fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(contentText), contentText),
+		})
+		objects = append(objects, pdfObject{
+			id: pageID,
+			content: fmt.Sprintf("<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 %d 0 R >> >> /Contents %d 0 R >>",
+				pagesID, pageWidth, pageHeight, fontID, contentID),
+		})
+	}
+
+	kids := make([]string, 0, len(pageIDs))
+	for _, id := range pageIDs {
+		kids = append(kids, fmt.Sprintf("%d 0 R", id))
+	}
+
+	objects = append(objects, pdfObject{
+		id:      fontID,
+		content: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+	})
+	objects = append(objects, pdfObject{
+		id:      pagesID,
+		content: fmt.Sprintf("<< /Type /Pages /Kids [%s] /Count %d >>", strings.Join(kids, " "), len(pageIDs)),
+	})
+
+	catalogID := newID()
+	objects = append(objects, pdfObject{
+		id:      catalogID,
+		content: fmt.Sprintf("<< /Type /Catalog /Pages %d 0 R >>", pagesID),
+	})
+
+	sort.Slice(objects, func(i, j int) bool { return objects[i].id < objects[j].id })
+
+	var buf bytes.Buffer
+	buf.WriteString("%PDF-1.4\n")
+
+	offsets := make([]int, nextID)
+	for _, obj := range objects {
+		offsets[obj.id] = buf.Len()
+		fmt.Fprintf(&buf, "%d 0 obj\n%s\nendobj\n", obj.id, obj.content)
+	}
+
+	xrefOffset := buf.Len()
+	fmt.Fprintf(&buf, "xref\n0 %d\n", nextID)
+	buf.WriteString("0000000000 65535 f \n")
+	for id := 1; id < nextID; id++ {
+		fmt.Fprintf(&buf, "%010d 00000 n \n", offsets[id])
+	}
+	fmt.Fprintf(&buf, "trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF", nextID, catalogID, xrefOffset)
+
+	return buf.Bytes(), nil
+}
+
+func renderPDFPage(lines []string, x, y, lineHeight int) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "BT\n/F1 12 Tf\n%d %d Td\n", x, y)
+	for i, line := range lines {
+		if i > 0 {
+			fmt.Fprintf(&b, "0 -%d Td\n", lineHeight)
+		}
+		fmt.Fprintf(&b, "(%s) Tj\n", escapePDFText(line))
+	}
+	b.WriteString("ET")
+	return b.String()
+}
+
+func wrapPDFText(text string, width int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	lines := []string{}
+	current := words[0]
+	for _, word := range words[1:] {
+		candidate := current + " " + word
+		if len(candidate) <= width {
+			current = candidate
+			continue
+		}
+		lines = append(lines, current)
+		current = word
+	}
+	lines = append(lines, current)
+	return lines
+}
+
+func escapePDFText(text string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `(`, `\(`, `)`, `\)`)
+	return replacer.Replace(text)
+}
+
 func toQuestionResponse(ds dataset, q question) questionResponse {
 	return questionResponse{
 		Version:         ds.Version,
@@ -898,6 +1077,11 @@ func splitAnswers(input string) []string {
 }
 
 var scrubber = regexp.MustCompile(`[^a-z0-9 ]+`)
+var stopWords = map[string]struct{}{
+	"a": {}, "an": {}, "the": {}, "of": {}, "in": {}, "their": {}, "there": {}, "to": {}, "for": {},
+	"from": {}, "and": {}, "or": {}, "is": {}, "are": {}, "on": {}, "at": {}, "by": {}, "with": {},
+	"into": {}, "that": {}, "this": {}, "these": {}, "those": {}, "your": {}, "our": {}, "its": {},
+}
 
 func normalize(input string) string {
 	input = strings.ToLower(input)
@@ -924,13 +1108,13 @@ func equivalent(user, accepted string) bool {
 		return true
 	}
 
-	acceptedWords := strings.Fields(a)
+	acceptedWords := significantWords(a)
 	if len(acceptedWords) == 0 {
 		return false
 	}
 
-	userWordSet := make(map[string]struct{}, len(strings.Fields(u)))
-	for _, word := range strings.Fields(u) {
+	userWordSet := make(map[string]struct{}, len(significantWords(u)))
+	for _, word := range significantWords(u) {
 		userWordSet[word] = struct{}{}
 	}
 
@@ -942,6 +1126,21 @@ func equivalent(user, accepted string) bool {
 	}
 
 	return float64(matchedWords)/float64(len(acceptedWords)) >= 0.75
+}
+
+func significantWords(input string) []string {
+	words := strings.Fields(input)
+	filtered := make([]string, 0, len(words))
+	for _, word := range words {
+		if _, ok := stopWords[word]; ok {
+			continue
+		}
+		filtered = append(filtered, word)
+	}
+	if len(filtered) == 0 {
+		return words
+	}
+	return filtered
 }
 
 func newSessionID() string {

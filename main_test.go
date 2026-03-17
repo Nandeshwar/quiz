@@ -49,10 +49,13 @@ func TestEquivalentAllowsSeventyFivePercentWordMatchIgnoringCase(t *testing.T) {
 	if !equivalent("father of constitution", `"Father of the Constitution"`) {
 		t.Fatal("expected 75 percent word match to pass")
 	}
-	if equivalent("father constitution", `"Father of the Constitution"`) {
+	if equivalent("father liberty", `"Father of the Constitution"`) {
 		t.Fatal("expected less than 75 percent word match to fail")
 	}
 	if !equivalent("JARED POLIS", "Jared Polis") {
 		t.Fatal("expected case-insensitive match to pass")
+	}
+	if equivalent("citizens in their states", "Citizens in their district") {
+		t.Fatal("expected different meaningful word to fail")
 	}
 }
