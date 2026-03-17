@@ -15,6 +15,7 @@ import (
 	mathrand "math/rand/v2"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"sort"
@@ -484,8 +485,13 @@ func main() {
 		})
 	})
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9999"
+	}
+
 	logRoutes()
-	log.Fatal(e.Start(":9999"))
+	log.Fatal(e.Start(":" + port))
 }
 
 func logRoutes() {

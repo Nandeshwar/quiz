@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: quiz
+    runtime: go
+    plan: free
+    buildCommand: go build -o quiz main.go
+    startCommand: ./quiz
+    healthCheckPath: /health
+    autoDeploy: true
