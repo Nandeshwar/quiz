@@ -28,7 +28,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-//go:embed data/*.json static/index.html static/contact.html
+//go:embed data/*.json static/index.html static/contact.html static/favicon.svg
 var appFS embed.FS
 
 const defaultZip = "80134"
@@ -437,6 +437,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	favicon, err := appFS.ReadFile("static/favicon.svg")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	datasets := map[string]dataset{
 		"v1": v1,
@@ -477,6 +481,9 @@ func main() {
 	e.GET("/contact", func(c echo.Context) error {
 		return c.HTML(http.StatusOK, contactPage)
 	})
+	e.GET("/favicon.svg", func(c echo.Context) error {
+		return c.Blob(http.StatusOK, "image/svg+xml", favicon)
+	})
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
@@ -499,6 +506,7 @@ func logRoutes() {
 	for _, route := range []string{
 		"GET    /",
 		"GET    /contact",
+		"GET    /favicon.svg",
 		"GET    /health",
 		"GET    /api/location?zip=80134",
 		`POST   /api/refresh-data`,
