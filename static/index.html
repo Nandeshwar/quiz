@@ -276,6 +276,17 @@
       color: var(--bad);
     }
 
+    .answer-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .answer-row label {
+      margin: 0;
+    }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -360,6 +371,11 @@
         flex-direction: column;
       }
 
+      .answer-row {
+        grid-template-columns: 1fr;
+      }
+
+      .answer-row button,
       .actions button,
       .compact-actions button {
         width: 100%;
@@ -515,13 +531,15 @@
               <div class="question-number" id="questionNumber"></div>
               <p class="question-text" id="questionText"></p>
               <p class="hint" id="questionHint"></p>
-              <label>
-                Your Answer
-                <textarea id="answerInput" placeholder="Type one answer, or separate multiple answers with commas."></textarea>
-              </label>
+              <div class="answer-row">
+                <label>
+                  Your Answer
+                  <textarea id="answerInput" placeholder="Type one answer, or separate multiple answers with commas."></textarea>
+                </label>
+                <button id="submitAnswerBtn" type="button">Submit Answer</button>
+              </div>
               <div id="answerFeedback" class="feedback hidden"></div>
               <div class="actions">
-                <button id="submitAnswerBtn" type="button">Submit Answer</button>
                 <button id="finishBtn" class="ghost" type="button">Show Results</button>
               </div>
             </div>
