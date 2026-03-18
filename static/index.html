@@ -811,7 +811,7 @@
     function showAnswerFeedback(payload, isCorrect) {
       answerFeedbackEl.innerHTML = `
         <strong>${isCorrect ? "Accepted Answer" : "Incorrect Answer"}</strong>
-        <p><b>Question:</b> ${escapeHtml(payload.question)}</p>
+        <p><b>Question #${escapeHtml(String(payload.questionId))}:</b> ${escapeHtml(payload.question)}</p>
         <p><b>Your answer:</b> ${escapeHtml(payload.userAnswer || "No answer")}</p>
         <div class="bank-answer">
           <b>Accepted answers:</b>
@@ -855,7 +855,7 @@
           <div class="actions">
             <span class="pill ${result.correct ? "good" : "bad"}">${result.correct ? "Correct" : "Incorrect"}</span>
           </div>
-          <p><strong>Q${result.questionId}.</strong> ${escapeHtml(result.question)}</p>
+          <p><strong>Original question #${result.questionId}.</strong> ${escapeHtml(result.question)}</p>
           <p><strong>Your answer:</strong> ${escapeHtml(result.userAnswer || "No answer")}</p>
           <div class="bank-answer">
             <strong>Accepted answers:</strong>
