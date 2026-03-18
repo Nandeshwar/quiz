@@ -578,7 +578,6 @@
       questionBank: [],
       questionBankLocality: "",
       questionBankAsOf: "",
-      awaitingNext: false,
       currentIndex: 0,
       totalQuestions: 0
     };
@@ -731,7 +730,6 @@
       state.questions = payload.questions;
       state.totalQuestions = payload.totalQuestions;
       state.currentIndex = 0;
-      state.awaitingNext = false;
 
       sessionMetaEl.textContent = `${payload.sessionId} · ${payload.totalQuestions} questions · ${payload.zip}`;
       locationMetaEl.textContent = `${payload.location.locality} · ${payload.location.representativeDistrict || "district unavailable"}`;
@@ -755,23 +753,9 @@
         ? `This prompt needs ${question.requiredAnswers} accepted answers. Separate them with commas.`
         : "This prompt needs one accepted answer.";
       answerInputEl.value = "";
-      document.getElementById("submitAnswerBtn").textContent = "Submit Answer";
-      state.awaitingNext = false;
-      hideAnswerFeedback();
-      answerInputEl.focus();
     }
 
     async function submitAnswer() {
-      if (state.awaitingNext) {
-        state.currentIndex += 1;
-        if (state.currentIndex >= state.questions.length) {
-          showResults();
-          return;
-        }
-        renderQuestion();
-        return;
-      }
-
       const question = state.questions[state.currentIndex];
       if (!question) {
         return;
@@ -794,23 +778,25 @@
         return;
       }
 
-      if (!payload.correct) {
-        showAnswerFeedback(payload, false);
-        state.awaitingNext = true;
-        document.getElementById("submitAnswerBtn").textContent = "Next Question";
-        setStatus("Marked incorrect. Review the accepted answers, then continue.", "bad");
+      showAnswerFeedback(payload, payload.correct);
+      setStatus(
+        payload.correct
+          ? `Accepted for question #${payload.questionId}. Next question ready.`
+          : `Marked incorrect for question #${payload.questionId}. Next question ready.`,
+        payload.correct ? "good" : "bad"
+      );
+
+      state.currentIndex += 1;
+      if (state.currentIndex >= state.questions.length) {
+        showResults();
         return;
       }
-
-      showAnswerFeedback(payload, true);
-      state.awaitingNext = true;
-      document.getElementById("submitAnswerBtn").textContent = "Next Question";
-      setStatus("Accepted. Review the possible answers, then continue.", "good");
+      renderQuestion();
     }
 
     function showAnswerFeedback(payload, isCorrect) {
       answerFeedbackEl.innerHTML = `
-        <strong>${isCorrect ? "Accepted Answer" : "Incorrect Answer"}</strong>
+        <strong>Last Submission: ${isCorrect ? "Accepted" : "Incorrect"}</strong>
         <p><b>Question #${escapeHtml(String(payload.questionId))}:</b> ${escapeHtml(payload.question)}</p>
         <p><b>Your answer:</b> ${escapeHtml(payload.userAnswer || "No answer")}</p>
         <div class="bank-answer">
@@ -822,6 +808,7 @@
       `;
       answerFeedbackEl.className = `feedback ${isCorrect ? "good" : "bad"}`;
       answerFeedbackEl.classList.remove("hidden");
+      answerFeedbackEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function hideAnswerFeedback() {
