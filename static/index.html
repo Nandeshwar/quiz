@@ -696,6 +696,8 @@
     document.getElementById("searchBtn").addEventListener("click", searchQuestions);
     document.getElementById("updateZipBtn").addEventListener("click", applyZipSelection);
     bankEl.addEventListener("click", toggleBankAnswers);
+    countEl.addEventListener("input", syncQuizSizeLimit);
+    countEl.addEventListener("change", syncQuizSizeLimit);
     zipCodeEl.addEventListener("change", applyZipSelection);
     searchInputEl.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -797,7 +799,13 @@
     }
 
     async function startQuiz() {
+      syncQuizSizeLimit();
+      const max = state.version === "v1" ? 128 : 100;
       const count = Number(countEl.value || "10");
+      if (!Number.isFinite(count) || count < 1 || count > max) {
+        setStatus(`Quiz size must be between 1 and ${max} for ${state.version.toUpperCase()}.`, "bad");
+        return;
+      }
       setStatus("Starting quiz...", "");
       resultsEl.innerHTML = "";
 
