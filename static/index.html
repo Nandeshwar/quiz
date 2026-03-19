@@ -500,6 +500,7 @@
             <button id="savePdfBtn" class="ghost" type="button">Download PDF</button>
             <button id="startBtn" type="button">Start Quiz</button>
             <button id="showBankBtn" class="ghost" type="button">Load Question Bank</button>
+            <button id="voiceAllBankBtn" class="ghost" type="button" data-default-label="Read All Questions">Read All Questions</button>
             <button id="refreshDataBtn" class="ghost" type="button">Fetch Latest Data</button>
             <button id="contactBtn" class="ghost" type="button">Contact</button>
           </div>
@@ -578,6 +579,7 @@
       questionBank: [],
       questionBankLocality: "",
       questionBankAsOf: "",
+      visibleBankQuestions: [],
       currentIndex: 0,
       totalQuestions: 0
     };
@@ -602,6 +604,7 @@
     const resultsEl = document.getElementById("results");
     const bankEl = document.getElementById("bank");
     const bankMetaEl = document.getElementById("bankMeta");
+    const voiceAllBankBtnEl = document.getElementById("voiceAllBankBtn");
     const searchInputEl = document.getElementById("searchInput");
 
     apiBaseEl.textContent = `${window.location.origin}/api`;
@@ -621,6 +624,7 @@
     document.getElementById("submitAnswerBtn").addEventListener("click", submitAnswer);
     document.getElementById("finishBtn").addEventListener("click", showResults);
     document.getElementById("showBankBtn").addEventListener("click", loadBank);
+    voiceAllBankBtnEl.addEventListener("click", playAllBankQuestions);
     document.getElementById("refreshDataBtn").addEventListener("click", refreshLatestData);
     document.getElementById("contactBtn").addEventListener("click", () => {
       window.location.href = "/contact";
@@ -654,6 +658,7 @@
     }
 
     function resetPanels() {
+      stopVoicePlayback();
       quizPanelEl.classList.add("hidden");
       resultsPanelEl.classList.add("hidden");
       bankPanelEl.classList.add("hidden");
@@ -665,6 +670,7 @@
       state.questionBank = [];
       state.questionBankLocality = "";
       state.questionBankAsOf = "";
+      state.visibleBankQuestions = [];
     }
 
     async function applyZipSelection() {
@@ -818,6 +824,161 @@
       answerFeedbackEl.className = "feedback hidden";
     }
 
+    let voicePlaybackToken = 0;
+    let voiceAnswerTimer = null;
+    let activeVoiceButton = null;
+
+    function stopVoicePlayback() {
+      voicePlaybackToken += 1;
+      if (voiceAnswerTimer) {
+        window.clearTimeout(voiceAnswerTimer);
+        voiceAnswerTimer = null;
+      }
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (activeVoiceButton) {
+        activeVoiceButton.disabled = false;
+        activeVoiceButton.textContent = activeVoiceButton.getAttribute("data-default-label") || "Voice Prompt";
+        activeVoiceButton = null;
+      }
+    }
+
+    function speakText(text, token) {
+      return new Promise((resolve, reject) => {
+        if (!("speechSynthesis" in window)) {
+          reject(new Error("Speech is not supported in this browser."));
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => {
+          if (token !== voicePlaybackToken) {
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        };
+        utterance.onerror = () => reject(new Error("Speech playback failed."));
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    function waitForMs(ms, token) {
+      return new Promise((resolve) => {
+        voiceAnswerTimer = window.setTimeout(() => {
+          if (token !== voicePlaybackToken) {
+            resolve(false);
+            return;
+          }
+          voiceAnswerTimer = null;
+          resolve(true);
+        }, ms);
+      });
+    }
+
+    async function playVoiceQuestion(item, button) {
+      if (!("speechSynthesis" in window)) {
+        setStatus("Voice playback is not supported in this browser.", "bad");
+        return;
+      }
+
+      stopVoicePlayback();
+      const token = voicePlaybackToken;
+      activeVoiceButton = button;
+      activeVoiceButton.disabled = true;
+      activeVoiceButton.textContent = "Reading...";
+
+      try {
+        setStatus(`Reading question #${item.id}. Answers will play after 5 seconds.`, "");
+        const finishedQuestion = await speakText(`Question ${item.id}. ${item.question}`, token);
+        if (!finishedQuestion || token !== voicePlaybackToken) {
+          return;
+        }
+
+        const shouldContinue = await waitForMs(5000, token);
+        if (!shouldContinue || token !== voicePlaybackToken) {
+          return;
+        }
+
+        const answersText = item.answers.join(", ");
+        await speakText(`Correct answers are: ${answersText}`, token);
+        if (token === voicePlaybackToken && activeVoiceButton) {
+          activeVoiceButton.disabled = false;
+          activeVoiceButton.textContent = activeVoiceButton.getAttribute("data-default-label") || "Voice Prompt";
+          activeVoiceButton = null;
+        }
+      } catch (error) {
+        setStatus(error.message || "Voice playback failed.", "bad");
+        if (activeVoiceButton) {
+          activeVoiceButton.disabled = false;
+          activeVoiceButton.textContent = activeVoiceButton.getAttribute("data-default-label") || "Voice Prompt";
+          activeVoiceButton = null;
+        }
+      }
+    }
+
+    async function playAllBankQuestions() {
+      const payload = await ensureQuestionBank();
+      if (!payload) {
+        return;
+      }
+
+      const items = state.visibleBankQuestions.length ? state.visibleBankQuestions : payload.questions;
+      if (!items.length) {
+        setStatus("No question bank items are available for voice playback.", "bad");
+        return;
+      }
+
+      bankMetaEl.textContent = `${items.length} question${items.length === 1 ? "" : "s"} ready for voice playback · ${state.questionBankLocality} · answers dated ${state.questionBankAsOf}`;
+      renderBank(items);
+      quizPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      bankPanelEl.classList.remove("hidden");
+
+      if (!("speechSynthesis" in window)) {
+        setStatus("Voice playback is not supported in this browser.", "bad");
+        return;
+      }
+
+      stopVoicePlayback();
+      const token = voicePlaybackToken;
+      activeVoiceButton = voiceAllBankBtnEl;
+      activeVoiceButton.disabled = true;
+      activeVoiceButton.textContent = "Reading All...";
+
+      try {
+        for (const item of items) {
+          setStatus(`Reading question #${item.id}. Answers will play after 5 seconds.`, "");
+          const finishedQuestion = await speakText(`Question ${item.id}. ${item.question}`, token);
+          if (!finishedQuestion || token !== voicePlaybackToken) {
+            return;
+          }
+
+          const shouldContinue = await waitForMs(5000, token);
+          if (!shouldContinue || token !== voicePlaybackToken) {
+            return;
+          }
+
+          const answersText = item.answers.join(", ");
+          const finishedAnswers = await speakText(`Correct answers are: ${answersText}`, token);
+          if (!finishedAnswers || token !== voicePlaybackToken) {
+            return;
+          }
+        }
+
+        setStatus(`Finished reading ${items.length} question${items.length === 1 ? "" : "s"}.`, "good");
+      } catch (error) {
+        setStatus(error.message || "Voice playback failed.", "bad");
+      } finally {
+        if (token === voicePlaybackToken && activeVoiceButton) {
+          activeVoiceButton.disabled = false;
+          activeVoiceButton.textContent = "Read All Questions";
+          activeVoiceButton = null;
+        }
+      }
+    }
+
     async function showResults() {
       if (!state.sessionId) {
         setStatus("Start a quiz first.", "bad");
@@ -936,6 +1097,8 @@
     }
 
     function renderBank(items) {
+      stopVoicePlayback();
+      state.visibleBankQuestions = items;
       if (!items.length) {
         bankEl.innerHTML = `
           <article class="bank-card">
@@ -950,7 +1113,10 @@
         <article class="bank-card">
           <div class="question-number">Question ${item.id}</div>
           <p><strong>${escapeHtml(item.question)}</strong></p>
-          <button class="ghost" type="button" data-bank-toggle="answers">Show Answers</button>
+          <div class="actions">
+            <button class="ghost" type="button" data-bank-toggle="answers">Show Answers</button>
+            <button class="ghost" type="button" data-bank-voice="${item.id}" data-default-label="Voice Prompt">Voice Prompt</button>
+          </div>
           <div class="bank-answer hidden" data-bank-answers>
             <ol class="answer-list">
               ${item.answers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
@@ -961,6 +1127,18 @@
     }
 
     function toggleBankAnswers(event) {
+      const voiceButton = event.target.closest("[data-bank-voice]");
+      if (voiceButton) {
+        const questionID = Number(voiceButton.getAttribute("data-bank-voice"));
+        const item = state.questionBank.find((question) => question.id === questionID);
+        if (!item) {
+          setStatus("Could not find that question for voice playback.", "bad");
+          return;
+        }
+        playVoiceQuestion(item, voiceButton);
+        return;
+      }
+
       const button = event.target.closest("[data-bank-toggle='answers']");
       if (!button) {
         return;
