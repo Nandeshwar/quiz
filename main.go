@@ -125,6 +125,7 @@ type answerResult struct {
 	UserAnswer      string   `json:"userAnswer"`
 	AcceptedAnswers []string `json:"acceptedAnswers"`
 	Correct         bool     `json:"correct"`
+	VersionNote     string   `json:"versionNote,omitempty"`
 }
 
 type quizSession struct {
@@ -472,8 +473,8 @@ func main() {
 			"message": "Latest Senate and governor data loaded",
 		})
 	})
-	registerVersionRoutes(api.Group("/v1"), v1, store, resolver)
-	registerVersionRoutes(api.Group("/v2"), v2, store, resolver)
+	registerVersionRoutes(api.Group("/v1"), v1, datasets, store, resolver)
+	registerVersionRoutes(api.Group("/v2"), v2, datasets, store, resolver)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.HTML(http.StatusOK, indexPage)
@@ -527,7 +528,7 @@ func logRoutes() {
 	}
 }
 
-func registerVersionRoutes(group *echo.Group, ds dataset, store *sessionStore, resolver *locationResolver) {
+func registerVersionRoutes(group *echo.Group, ds dataset, datasets map[string]dataset, store *sessionStore, resolver *locationResolver) {
 	group.GET("/questions", func(c echo.Context) error {
 		localized, loc, err := resolveDatasetForRequest(ds, resolver, c.QueryParam("zip"))
 		if err != nil {
@@ -654,6 +655,9 @@ func registerVersionRoutes(group *echo.Group, ds dataset, store *sessionStore, r
 			AcceptedAnswers: q.Answers,
 			Correct:         matchesAnswer(q, req.Answer),
 		}
+		if !result.Correct {
+			result.VersionNote = crossVersionNote(ds, datasets, q.ID, req.Answer)
+		}
 
 		store.mu.Lock()
 		session.Answers[q.ID] = result
@@ -668,6 +672,7 @@ func registerVersionRoutes(group *echo.Group, ds dataset, store *sessionStore, r
 			"userAnswer":      result.UserAnswer,
 			"acceptedAnswers": result.AcceptedAnswers,
 			"correct":         result.Correct,
+			"versionNote":     result.VersionNote,
 			"answered":        answered,
 			"remaining":       total - answered,
 		})
@@ -762,6 +767,26 @@ func findQuestionInList(items []question, id int) (question, bool) {
 		}
 	}
 	return question{}, false
+}
+
+func crossVersionNote(current dataset, all map[string]dataset, questionID int, userAnswer string) string {
+	for version, candidate := range all {
+		if version == current.Version {
+			continue
+		}
+		q, ok := findQuestion(candidate, questionID)
+		if !ok || !matchesAnswer(q, userAnswer) {
+			continue
+		}
+		return fmt.Sprintf(
+			"This answer is incorrect for %s (%d questions), but it would be accepted for %s (%d questions).",
+			strings.ToUpper(current.Version),
+			len(current.Questions),
+			strings.ToUpper(candidate.Version),
+			len(candidate.Questions),
+		)
+	}
+	return ""
 }
 
 var (

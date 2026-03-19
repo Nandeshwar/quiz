@@ -627,6 +627,7 @@
     });
     document.getElementById("searchBtn").addEventListener("click", searchQuestions);
     document.getElementById("updateZipBtn").addEventListener("click", applyZipSelection);
+    bankEl.addEventListener("click", toggleBankAnswers);
     zipCodeEl.addEventListener("change", applyZipSelection);
     searchInputEl.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -805,6 +806,7 @@
             ${payload.acceptedAnswers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
           </ol>
         </div>
+        ${payload.versionNote ? `<p class="meta"><strong>Note:</strong> ${escapeHtml(payload.versionNote)}</p>` : ""}
       `;
       answerFeedbackEl.className = `feedback ${isCorrect ? "good" : "bad"}`;
       answerFeedbackEl.classList.remove("hidden");
@@ -850,6 +852,7 @@
               ${result.acceptedAnswers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
             </ol>
           </div>
+          ${result.versionNote ? `<p class="meta"><strong>Note:</strong> ${escapeHtml(result.versionNote)}</p>` : ""}
         </article>
       `).join("");
 
@@ -947,13 +950,31 @@
         <article class="bank-card">
           <div class="question-number">Question ${item.id}</div>
           <p><strong>${escapeHtml(item.question)}</strong></p>
-          <div class="bank-answer">
+          <button class="ghost" type="button" data-bank-toggle="answers">Show Answers</button>
+          <div class="bank-answer hidden" data-bank-answers>
             <ol class="answer-list">
               ${item.answers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}
             </ol>
           </div>
         </article>
       `).join("");
+    }
+
+    function toggleBankAnswers(event) {
+      const button = event.target.closest("[data-bank-toggle='answers']");
+      if (!button) {
+        return;
+      }
+
+      const card = button.closest(".bank-card");
+      const answers = card ? card.querySelector("[data-bank-answers]") : null;
+      if (!answers) {
+        return;
+      }
+
+      const isHidden = answers.classList.contains("hidden");
+      answers.classList.toggle("hidden", !isHidden);
+      button.textContent = isHidden ? "Hide Answers" : "Show Answers";
     }
 
     function normalizeSearch(value) {
