@@ -59,3 +59,32 @@ func TestEquivalentAllowsSeventyFivePercentWordMatchIgnoringCase(t *testing.T) {
 		t.Fatal("expected different meaningful word to fail")
 	}
 }
+
+func TestMatchesAnswerDoesNotAcceptBroaderPhraseForEmbeddedAnswer(t *testing.T) {
+	q := question{
+		ID:              66,
+		Question:        "What do we show loyalty to when we say the Pledge of Allegiance?",
+		Answers:         []string{"The United States", "The flag"},
+		RequiredAnswers: 1,
+	}
+
+	if matchesAnswer(q, "The president of the United States") {
+		t.Fatal("expected broader phrase containing accepted answer text to fail")
+	}
+	if !matchesAnswer(q, "The United States") {
+		t.Fatal("expected exact accepted answer to pass")
+	}
+}
+
+func TestMatchesAnswerAllowsCommonTitleForPersonName(t *testing.T) {
+	q := question{
+		ID:              61,
+		Question:        "Who is one of your state's U.S. Senators now?",
+		Answers:         []string{"Michael Bennet"},
+		RequiredAnswers: 1,
+	}
+
+	if !matchesAnswer(q, "Senator Michael Bennet") {
+		t.Fatal("expected title-prefixed person name to pass")
+	}
+}

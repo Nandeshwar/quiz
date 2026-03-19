@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -1176,6 +1177,11 @@ var stopWords = map[string]struct{}{
 	"into": {}, "that": {}, "this": {}, "these": {}, "those": {}, "your": {}, "our": {}, "its": {},
 }
 
+var answerTitleWords = map[string]struct{}{
+	"senator": {}, "senators": {}, "representative": {}, "representatives": {}, "rep": {},
+	"congressman": {}, "congresswoman": {}, "governor": {}, "president": {}, "vice": {}, "mayor": {},
+}
+
 func normalize(input string) string {
 	input = strings.ToLower(input)
 	input = strings.ReplaceAll(input, "u.s.", "us")
@@ -1197,7 +1203,7 @@ func equivalent(user, accepted string) bool {
 	if u == "" || a == "" {
 		return false
 	}
-	if u == a || strings.Contains(a, u) || strings.Contains(u, a) {
+	if u == a || strings.Contains(a, u) {
 		return true
 	}
 
@@ -1217,8 +1223,16 @@ func equivalent(user, accepted string) bool {
 			matchedWords++
 		}
 	}
+	if float64(matchedWords)/float64(len(acceptedWords)) < 0.75 {
+		return false
+	}
 
-	return float64(matchedWords)/float64(len(acceptedWords)) >= 0.75
+	userWords := significantWords(u)
+	if len(acceptedWords) <= 2 && len(userWords) > len(acceptedWords) && !extraWordsAllowed(userWords, acceptedWords, accepted) {
+		return false
+	}
+
+	return true
 }
 
 func significantWords(input string) []string {
@@ -1234,6 +1248,51 @@ func significantWords(input string) []string {
 		return words
 	}
 	return filtered
+}
+
+func extraWordsAllowed(userWords, acceptedWords []string, acceptedRaw string) bool {
+	acceptedSet := make(map[string]struct{}, len(acceptedWords))
+	for _, word := range acceptedWords {
+		acceptedSet[word] = struct{}{}
+	}
+
+	extras := make([]string, 0, len(userWords))
+	for _, word := range userWords {
+		if _, ok := acceptedSet[word]; ok {
+			continue
+		}
+		extras = append(extras, word)
+	}
+	if len(extras) == 0 {
+		return true
+	}
+	if !looksLikePersonName(acceptedRaw) {
+		return false
+	}
+	for _, word := range extras {
+		if _, ok := answerTitleWords[word]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func looksLikePersonName(input string) bool {
+	cleaned := strings.NewReplacer("(", "", ")", "", ".", "", ",", "", `"`, "").Replace(strings.TrimSpace(input))
+	parts := strings.Fields(cleaned)
+	if len(parts) < 2 || len(parts) > 4 {
+		return false
+	}
+	if strings.EqualFold(parts[0], "the") {
+		return false
+	}
+	for _, part := range parts {
+		runes := []rune(part)
+		if len(runes) == 0 || !unicode.IsUpper(runes[0]) {
+			return false
+		}
+	}
+	return true
 }
 
 func newSessionID() string {
