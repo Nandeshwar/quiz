@@ -126,6 +126,10 @@ type answerResult struct {
 	AcceptedAnswers []string `json:"acceptedAnswers"`
 	Correct         bool     `json:"correct"`
 	VersionNote     string   `json:"versionNote,omitempty"`
+	OtherSetSize    int      `json:"otherSetSize,omitempty"`
+	OtherQuestionID int      `json:"otherQuestionId,omitempty"`
+	OtherQuestion   string   `json:"otherQuestion,omitempty"`
+	OtherAnswers    []string `json:"otherAnswers,omitempty"`
 }
 
 type quizSession struct {
@@ -656,7 +660,13 @@ func registerVersionRoutes(group *echo.Group, ds dataset, datasets map[string]da
 			Correct:         matchesAnswer(q, req.Answer),
 		}
 		if !result.Correct {
-			result.VersionNote = crossVersionNote(ds, datasets, q.ID, req.Answer)
+			var otherQuestion question
+			result.VersionNote, otherQuestion, result.OtherSetSize = crossVersionNote(ds, datasets, q.ID, req.Answer)
+			if otherQuestion.ID != 0 {
+				result.OtherQuestionID = otherQuestion.ID
+				result.OtherAnswers = otherQuestion.Answers
+				result.OtherQuestion = otherQuestion.Question
+			}
 		}
 
 		store.mu.Lock()
@@ -673,6 +683,10 @@ func registerVersionRoutes(group *echo.Group, ds dataset, datasets map[string]da
 			"acceptedAnswers": result.AcceptedAnswers,
 			"correct":         result.Correct,
 			"versionNote":     result.VersionNote,
+			"otherSetSize":    result.OtherSetSize,
+			"otherQuestionId": result.OtherQuestionID,
+			"otherQuestion":   result.OtherQuestion,
+			"otherAnswers":    result.OtherAnswers,
 			"answered":        answered,
 			"remaining":       total - answered,
 		})
@@ -769,10 +783,10 @@ func findQuestionInList(items []question, id int) (question, bool) {
 	return question{}, false
 }
 
-func crossVersionNote(current dataset, all map[string]dataset, questionID int, userAnswer string) string {
+func crossVersionNote(current dataset, all map[string]dataset, questionID int, userAnswer string) (string, question, int) {
 	currentQuestion, ok := findQuestion(current, questionID)
 	if !ok {
-		return ""
+		return "", question{}, 0
 	}
 
 	for version, candidate := range all {
@@ -785,7 +799,7 @@ func crossVersionNote(current dataset, all map[string]dataset, questionID int, u
 				"This answer is not accepted in the %d-question set, but it is accepted in the %d-question set.",
 				len(current.Questions),
 				len(candidate.Questions),
-			)
+			), q, len(candidate.Questions)
 		}
 
 		for _, q := range candidate.Questions {
@@ -797,10 +811,10 @@ func crossVersionNote(current dataset, all map[string]dataset, questionID int, u
 				len(current.Questions),
 				len(candidate.Questions),
 				q.ID,
-			)
+			), q, len(candidate.Questions)
 		}
 	}
-	return ""
+	return "", question{}, 0
 }
 
 func questionsAreEquivalent(a, b question) bool {
