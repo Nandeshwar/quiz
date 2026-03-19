@@ -218,6 +218,27 @@
       padding: 16px;
     }
 
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .score-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-family: "Trebuchet MS", sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(26, 32, 44, 0.08);
+      color: var(--accent-dark);
+      white-space: nowrap;
+    }
+
     .question-text {
       margin: 0;
       font-size: clamp(22px, 2.6vw, 32px);
@@ -394,6 +415,11 @@
         border-radius: 18px;
       }
 
+      .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
       .question-text {
         font-size: clamp(24px, 8vw, 34px);
       }
@@ -533,7 +559,10 @@
 
           <section id="quizPanel" class="hidden stack">
             <div class="question-card stack">
-              <div class="question-number" id="questionNumber"></div>
+              <div class="question-header">
+                <div class="question-number" id="questionNumber"></div>
+                <div class="score-chip" id="quizScore">0/100</div>
+              </div>
               <p class="question-text" id="questionText"></p>
               <p class="hint" id="questionHint"></p>
               <div class="answer-row">
@@ -582,7 +611,8 @@
       questionBankAsOf: "",
       visibleBankQuestions: [],
       currentIndex: 0,
-      totalQuestions: 0
+      totalQuestions: 0,
+      correctAnswers: 0
     };
 
     const versionEl = document.getElementById("version");
@@ -596,6 +626,7 @@
     const bankPanelEl = document.getElementById("bankPanel");
     const resultsPanelEl = document.getElementById("resultsPanel");
     const questionNumberEl = document.getElementById("questionNumber");
+    const quizScoreEl = document.getElementById("quizScore");
     const questionTextEl = document.getElementById("questionText");
     const questionHintEl = document.getElementById("questionHint");
     const answerInputEl = document.getElementById("answerInput");
@@ -740,6 +771,7 @@
       state.questions = payload.questions;
       state.totalQuestions = payload.totalQuestions;
       state.currentIndex = 0;
+      state.correctAnswers = 0;
 
       sessionMetaEl.textContent = `${payload.sessionId} · ${payload.totalQuestions} questions · ${payload.zip}`;
       locationMetaEl.textContent = `${payload.location.locality} · ${payload.location.representativeDistrict || "district unavailable"}`;
@@ -758,6 +790,7 @@
       }
 
       questionNumberEl.textContent = `Question ${state.currentIndex + 1} of ${state.totalQuestions}`;
+      renderQuizScore();
       questionTextEl.textContent = question.question;
       questionHintEl.textContent = question.requiredAnswers > 1
         ? `This prompt needs ${question.requiredAnswers} accepted answers. Separate them with commas.`
@@ -788,6 +821,10 @@
         return;
       }
 
+      if (payload.correct) {
+        state.correctAnswers += 1;
+      }
+      renderQuizScore();
       showAnswerFeedback(payload, payload.correct);
       setStatus(
         payload.correct
@@ -802,6 +839,11 @@
         return;
       }
       renderQuestion();
+    }
+
+    function renderQuizScore() {
+      const total = state.version === "v1" ? 128 : 100;
+      quizScoreEl.textContent = `${state.correctAnswers}/${total}`;
     }
 
     function showAnswerFeedback(payload, isCorrect) {

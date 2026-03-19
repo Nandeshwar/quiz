@@ -770,23 +770,63 @@ func findQuestionInList(items []question, id int) (question, bool) {
 }
 
 func crossVersionNote(current dataset, all map[string]dataset, questionID int, userAnswer string) string {
+	currentQuestion, ok := findQuestion(current, questionID)
+	if !ok {
+		return ""
+	}
+
 	for version, candidate := range all {
 		if version == current.Version {
 			continue
 		}
-		q, ok := findQuestion(candidate, questionID)
-		if !ok || !matchesAnswer(q, userAnswer) {
-			continue
+
+		if q, ok := findQuestion(candidate, questionID); ok && matchesAnswer(q, userAnswer) {
+			return fmt.Sprintf(
+				"This answer is not accepted in the %d-question set, but it is accepted in the %d-question set.",
+				len(current.Questions),
+				len(candidate.Questions),
+			)
 		}
-		return fmt.Sprintf(
-			"This answer is incorrect for %s (%d questions), but it would be accepted for %s (%d questions).",
-			strings.ToUpper(current.Version),
-			len(current.Questions),
-			strings.ToUpper(candidate.Version),
-			len(candidate.Questions),
-		)
+
+		for _, q := range candidate.Questions {
+			if !matchesAnswer(q, userAnswer) || !questionsAreEquivalent(currentQuestion, q) {
+				continue
+			}
+			return fmt.Sprintf(
+				"This answer is not accepted in the %d-question set, but it is accepted in the %d-question set as Question #%d.",
+				len(current.Questions),
+				len(candidate.Questions),
+				q.ID,
+			)
+		}
 	}
 	return ""
+}
+
+func questionsAreEquivalent(a, b question) bool {
+	wordsA := significantWords(normalize(a.Question))
+	wordsB := significantWords(normalize(b.Question))
+	if len(wordsA) == 0 || len(wordsB) == 0 {
+		return false
+	}
+
+	setA := make(map[string]struct{}, len(wordsA))
+	for _, word := range wordsA {
+		setA[word] = struct{}{}
+	}
+
+	overlap := 0
+	for _, word := range wordsB {
+		if _, ok := setA[word]; ok {
+			overlap++
+		}
+	}
+
+	minLen := len(wordsA)
+	if len(wordsB) < minLen {
+		minLen = len(wordsB)
+	}
+	return overlap >= 2 && float64(overlap)/float64(minLen) >= 0.4
 }
 
 var (
