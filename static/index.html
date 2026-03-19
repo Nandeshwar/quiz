@@ -501,6 +501,7 @@
             <button id="startBtn" type="button">Start Quiz</button>
             <button id="showBankBtn" class="ghost" type="button">Load Question Bank</button>
             <button id="voiceAllBankBtn" class="ghost" type="button" data-default-label="Read All Questions">Read All Questions</button>
+            <button id="voiceRandomBankBtn" class="ghost" type="button" data-default-label="Read All Random Questions">Read All Random Questions</button>
             <button id="refreshDataBtn" class="ghost" type="button">Fetch Latest Data</button>
             <button id="contactBtn" class="ghost" type="button">Contact</button>
           </div>
@@ -605,6 +606,7 @@
     const bankEl = document.getElementById("bank");
     const bankMetaEl = document.getElementById("bankMeta");
     const voiceAllBankBtnEl = document.getElementById("voiceAllBankBtn");
+    const voiceRandomBankBtnEl = document.getElementById("voiceRandomBankBtn");
     const searchInputEl = document.getElementById("searchInput");
 
     apiBaseEl.textContent = `${window.location.origin}/api`;
@@ -625,6 +627,7 @@
     document.getElementById("finishBtn").addEventListener("click", showResults);
     document.getElementById("showBankBtn").addEventListener("click", loadBank);
     voiceAllBankBtnEl.addEventListener("click", playAllBankQuestions);
+    voiceRandomBankBtnEl.addEventListener("click", playRandomBankQuestions);
     document.getElementById("refreshDataBtn").addEventListener("click", refreshLatestData);
     document.getElementById("contactBtn").addEventListener("click", () => {
       window.location.href = "/contact";
@@ -973,7 +976,74 @@
       } finally {
         if (token === voicePlaybackToken && activeVoiceButton) {
           activeVoiceButton.disabled = false;
-          activeVoiceButton.textContent = "Read All Questions";
+          activeVoiceButton.textContent = activeVoiceButton.getAttribute("data-default-label") || "Read All Questions";
+          activeVoiceButton = null;
+        }
+      }
+    }
+
+    async function playRandomBankQuestions() {
+      const payload = await ensureQuestionBank();
+      if (!payload) {
+        return;
+      }
+
+      const sourceItems = state.visibleBankQuestions.length ? state.visibleBankQuestions : payload.questions;
+      const items = [...sourceItems];
+      if (!items.length) {
+        setStatus("No question bank items are available for voice playback.", "bad");
+        return;
+      }
+
+      for (let i = items.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+
+      bankMetaEl.textContent = `${items.length} question${items.length === 1 ? "" : "s"} ready for random voice playback · ${state.questionBankLocality} · answers dated ${state.questionBankAsOf}`;
+      renderBank(sourceItems);
+      quizPanelEl.classList.add("hidden");
+      resultsPanelEl.classList.add("hidden");
+      bankPanelEl.classList.remove("hidden");
+
+      if (!("speechSynthesis" in window)) {
+        setStatus("Voice playback is not supported in this browser.", "bad");
+        return;
+      }
+
+      stopVoicePlayback();
+      const token = voicePlaybackToken;
+      activeVoiceButton = voiceRandomBankBtnEl;
+      activeVoiceButton.disabled = true;
+      activeVoiceButton.textContent = "Reading Random...";
+
+      try {
+        for (const item of items) {
+          setStatus(`Reading question #${item.id} in random order. Answers will play after 5 seconds.`, "");
+          const finishedQuestion = await speakText(`Question ${item.id}. ${item.question}`, token);
+          if (!finishedQuestion || token !== voicePlaybackToken) {
+            return;
+          }
+
+          const shouldContinue = await waitForMs(5000, token);
+          if (!shouldContinue || token !== voicePlaybackToken) {
+            return;
+          }
+
+          const answersText = item.answers.join(", ");
+          const finishedAnswers = await speakText(`Correct answers are: ${answersText}`, token);
+          if (!finishedAnswers || token !== voicePlaybackToken) {
+            return;
+          }
+        }
+
+        setStatus(`Finished reading ${items.length} random question${items.length === 1 ? "" : "s"}.`, "good");
+      } catch (error) {
+        setStatus(error.message || "Voice playback failed.", "bad");
+      } finally {
+        if (token === voicePlaybackToken && activeVoiceButton) {
+          activeVoiceButton.disabled = false;
+          activeVoiceButton.textContent = activeVoiceButton.getAttribute("data-default-label") || "Read All Random Questions";
           activeVoiceButton = null;
         }
       }
